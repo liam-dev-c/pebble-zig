@@ -1,0 +1,11 @@
+.{
+    .name = .pebble_zig,
+    .fingerprint = 0xed5327467c75f5d,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.15.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

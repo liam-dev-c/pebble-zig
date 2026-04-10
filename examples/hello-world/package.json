@@ -1,0 +1,26 @@
+{
+  "name": "hello-world",
+  "author": "pebble-zig",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "pebble": {
+    "displayName": "Hello Zig",
+    "uuid": "00000000-0000-0000-0000-000000000001",
+    "sdkVersion": "3",
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "diorite",
+      "chalk",
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [],
+    "resources": {
+      "media": []
+    }
+  }
+}
