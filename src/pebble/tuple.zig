@@ -1,57 +1,67 @@
 /// Convenience helpers for Pebble Tuple values.
 ///
-/// The raw C `Tuple` type uses a flexible array member for its value.
-/// These helpers provide safe access to the typed value fields.
+/// The raw C `Tuple` type has a flexible array member `value[]` that
+/// zig translate-c cannot represent (emits opaque {}).  build.zig patches
+/// the generated c.zig to inject a concrete packed-struct definition that
+/// contains only the header fields (key, type, length).  The variable-length
+/// value bytes immediately follow the header in memory; access them via the
+/// helpers below which use pointer arithmetic.
 const c = @import("c");
 const std = @import("std");
 
 pub const Tuple = c.Tuple;
 
+/// Pointer to the value bytes that follow the Tuple header in memory.
+inline fn valueBytes(tuple: *const c.Tuple) [*]const u8 {
+    return @as([*]const u8, @ptrCast(tuple)) + @sizeOf(c.Tuple);
+}
+
 /// Returns the value as a null-terminated C string pointer.
 /// Only valid when `tuple.type` is `TUPLE_CSTRING`.
 pub fn getCString(tuple: *const Tuple) [*:0]const u8 {
-    const val = tuple.value();
-    return @ptrCast(&val[0].cstring);
+    return @ptrCast(valueBytes(tuple));
 }
 
-/// Returns the value as a Zig slice (not null-terminated).
+/// Returns the value as a Zig slice.
 /// Only valid when `tuple.type` is `TUPLE_BYTE_ARRAY` or `TUPLE_CSTRING`.
 pub fn getData(tuple: *const Tuple) []const u8 {
-    const val = tuple.value();
-    const ptr: [*]const u8 = @ptrCast(&val[0].data);
-    return ptr[0..tuple.length];
+    return valueBytes(tuple)[0..tuple.length];
 }
 
 /// Returns the value as a u32.
-/// Only valid when `tuple.type` is `TUPLE_UINT`.
+/// Only valid when `tuple.type` is `TUPLE_UINT` and `tuple.length` is 4.
 pub fn getUint32(tuple: *const Tuple) u32 {
-    return tuple.value()[0].uint32;
+    return @as(*align(1) const u32, @ptrCast(valueBytes(tuple))).*;
 }
 
 /// Returns the value as an i32.
-/// Only valid when `tuple.type` is `TUPLE_INT`.
+/// Only valid when `tuple.type` is `TUPLE_INT` and `tuple.length` is 4.
 pub fn getInt32(tuple: *const Tuple) i32 {
-    return tuple.value()[0].int32;
+    return @as(*align(1) const i32, @ptrCast(valueBytes(tuple))).*;
 }
 
 /// Returns the value as a u16.
+/// Only valid when `tuple.type` is `TUPLE_UINT` and `tuple.length` is 2.
 pub fn getUint16(tuple: *const Tuple) u16 {
-    return tuple.value()[0].uint16;
+    return @as(*align(1) const u16, @ptrCast(valueBytes(tuple))).*;
 }
 
 /// Returns the value as an i16.
+/// Only valid when `tuple.type` is `TUPLE_INT` and `tuple.length` is 2.
 pub fn getInt16(tuple: *const Tuple) i16 {
-    return tuple.value()[0].int16;
+    return @as(*align(1) const i16, @ptrCast(valueBytes(tuple))).*;
 }
 
 /// Returns the value as a u8.
+/// Only valid when `tuple.type` is `TUPLE_UINT` and `tuple.length` is 1.
 pub fn getUint8(tuple: *const Tuple) u8 {
-    return tuple.value()[0].uint8;
+    return valueBytes(tuple)[0];
 }
 
 /// Returns the value as an i8.
+/// Only valid when `tuple.type` is `TUPLE_INT` and `tuple.length` is 1.
 pub fn getInt8(tuple: *const Tuple) i8 {
-    return tuple.value()[0].int8;
+    return @bitCast(valueBytes(tuple)[0]);
 }
 
 // ─── Tuplet construction helpers (for AppSync initial values) ────────────────

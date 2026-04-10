@@ -156,15 +156,24 @@ fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath) *
     translate.addFileArg(stripped_h);
     const c_zig_raw = translate.addOutputFileArg("c.zig");
 
-    // Step 5: Fix GColor8 — translate-c emits an opaque {} for the anonymous
-    // bitfield struct inside the union, which Zig rejects.  Strip those lines
-    // so the union keeps only its `argb: u8` member and compiles cleanly.
+    // Step 5: Fix translate-c opaques.
+    //
+    // Two known cases:
+    //   GColor8 — anonymous bitfield struct inside a union → strip the opaque
+    //             declaration and its usage so the union keeps only `argb: u8`.
+    //   Tuple   — flexible array member `value[]` → replace the opaque with a
+    //             concrete packed struct containing only the header fields.
+    //             tuple.zig accesses the value bytes via pointer arithmetic.
     const patch = b.addSystemCommand(&.{
-        "bash", "-c",
-        "sed -e '/^const struct_unnamed_[0-9]* = opaque {};$/d'" ++
-        "    -e '/^    unnamed_[0-9]*: struct_unnamed_[0-9]*,$/d'" ++
-        "    \"$1\" > \"$2\"",
-        "_",
+        "python3", "-c",
+        \\import sys, re
+        \\s = open(sys.argv[1]).read()
+        \\s = re.sub(r'^const struct_unnamed_\d+ = opaque \{\};\n', '', s, flags=re.MULTILINE)
+        \\s = re.sub(r'^ {4}unnamed_\d+: struct_unnamed_\d+,\n', '', s, flags=re.MULTILINE)
+        \\s = s.replace('pub const Tuple = opaque {};',
+        \\    'pub const Tuple = packed struct { key: u32, @"type": u8, length: u16 };')
+        \\open(sys.argv[2], 'w').write(s)
+        ,
     });
     patch.addFileArg(c_zig_raw);
     const c_zig_source = patch.addOutputFileArg("c.zig");
