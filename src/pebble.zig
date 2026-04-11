@@ -32,6 +32,11 @@ pub const tuple = @import("pebble/tuple.zig");
 pub const bitmap = @import("pebble/bitmap.zig");
 pub const fonts = @import("pebble/fonts.zig");
 pub const event = @import("pebble/event/root.zig");
+pub const graphics = @import("pebble/graphics.zig");
+pub const vibes = @import("pebble/vibes.zig");
+pub const persist = @import("pebble/persist.zig");
+pub const unobstructed = @import("pebble/unobstructed.zig");
+pub const resources = @import("pebble/resources.zig");
 
 // Wrapper re-exports
 pub const Layer = layer.Layer;
@@ -75,6 +80,10 @@ pub const layer_get_bounds = types.layer_get_bounds;
 pub const layer_get_frame = types.layer_get_frame;
 pub const layer_add_child = types.layer_add_child;
 pub const layer_mark_dirty = types.layer_mark_dirty;
+
+pub const grect_equal = c.grect_equal;
+pub const GCornerMask = c.GCornerMask;
+pub const GCornerNone = c.GCornerNone;
 
 // Platform feature flags (set at build time via build_options)
 const build_options = @import("build_options");

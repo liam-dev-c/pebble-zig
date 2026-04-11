@@ -1,6 +1,13 @@
 /// Clock and tick-timer utilities
 const c = @import("c");
 
+pub const SECOND_UNIT: c.TimeUnits = 1 << 0;
+pub const MINUTE_UNIT: c.TimeUnits = 1 << 1;
+pub const HOUR_UNIT: c.TimeUnits = 1 << 2;
+pub const DAY_UNIT: c.TimeUnits = 1 << 3;
+pub const MONTH_UNIT: c.TimeUnits = 1 << 4;
+pub const YEAR_UNIT: c.TimeUnits = 1 << 5;
+
 /// Returns true if the watch is set to 24-hour time.
 pub fn is24h() bool {
     return c.clock_is_24h_style();

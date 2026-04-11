@@ -13,4 +13,5 @@ examples/*/.zig-cache/
 examples/*/generated/
 examples/*/src/generated_keys.zig
 examples/*/.lock-waf_linux_build
+examples/*/node_modules/
 .idea/

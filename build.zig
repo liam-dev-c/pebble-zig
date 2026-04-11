@@ -23,6 +23,7 @@ pub fn addPebbleModule(
     options: PebbleAppOptions,
     optimize: std.builtin.OptimizeMode,
     defines: PlatformDefines,
+    platform_name: []const u8,
 ) *std.Build.Module {
     const target = pebbleTarget(b);
 
@@ -42,7 +43,7 @@ pub fn addPebbleModule(
     const pebble_lib = options.pebble_lib_path orelse b.path("src/pebble.zig");
 
     // Generate c.zig from SDK headers
-    const c_zig = generateCBindings(b, options.pebble_sdk_include_path);
+    const c_zig = generateCBindings(b, options.pebble_sdk_include_path, platform_name);
 
     const pebble_mod = b.addModule("pebble", .{
         .root_source_file = pebble_lib,
@@ -74,7 +75,7 @@ pub fn addPebbleApp(b: *std.Build, options: PebbleAppOptions) void {
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
     const target = pebbleTarget(b);
 
-    const pebble_mod = addPebbleModule(b, options, optimize, defines);
+    const pebble_mod = addPebbleModule(b, options, optimize, defines, platform_name);
 
     const app_mod = b.addModule(options.name, .{
         .root_source_file = options.root_source_file,
@@ -106,13 +107,13 @@ pub fn addPebbleApp(b: *std.Build, options: PebbleAppOptions) void {
 ///   2. Preprocess pebble.h with arm-none-eabi-gcc -E -nostdinc using stubs
 ///   3. Strip preprocessor line markers
 ///   4. Run zig translate-c on the result
-fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath) *std.Build.Module {
+fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath, platform_name: []const u8) *std.Build.Module {
     _ = sdk_include_override;
 
     const sdk_path = discoverSdkPath(b.allocator) orelse
         @panic("Pebble SDK not found at ~/.pebble-sdk. Install the SDK or set pebble_sdk_include_path.");
 
-    const pebble_include_path = b.pathJoin(&.{ sdk_path, "sdk-core/pebble/basalt/include" });
+    const pebble_include_path = b.pathJoin(&.{ sdk_path, "sdk-core/pebble", platform_name, "include" });
     const arm_gcc = discoverArmGcc(b.allocator) orelse
         @panic("arm-none-eabi-gcc not found. Install Pebble SDK toolchain.");
 
@@ -258,6 +259,7 @@ const STUB_STDBOOL =
 const STUB_STDIO =
     \\#pragma once
     \\#include <stddef.h>
+    \\int snprintf(char *str, size_t size, const char *format, ...);
     \\
 ;
 

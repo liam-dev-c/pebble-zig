@@ -1,0 +1,16 @@
+.{
+    .name = .watchface_tutorial,
+    .fingerprint = 0xb13538f9883e9b76,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.15.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+    .dependencies = .{
+        .pebble_zig = .{
+            .path = "../..",
+        },
+    },
+}

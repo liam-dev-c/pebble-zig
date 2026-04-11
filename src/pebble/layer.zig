@@ -40,6 +40,14 @@ pub const Layer = struct {
         c.layer_set_update_proc(self.raw, proc);
     }
 
+    pub fn setHidden(self: Layer, hidden: bool) void {
+        c.layer_set_hidden(self.raw, hidden);
+    }
+
+    pub fn setFrame(self: Layer, frame: c.GRect) void {
+        c.layer_set_frame(self.raw, frame);
+    }
+
     pub fn getRaw(self: Layer) *c.Layer {
         return self.raw;
     }
@@ -79,6 +87,18 @@ pub const TextLayer = struct {
         c.text_layer_set_font(self.raw, font);
     }
 
+    pub fn setHidden(self: TextLayer, hidden: bool) void {
+        c.layer_set_hidden(self.asLayer(), hidden);
+    }
+
+    pub fn setFrame(self: TextLayer, frame: c.GRect) void {
+        c.layer_set_frame(self.asLayer(), frame);
+    }
+
+    pub fn getFrame(self: TextLayer) c.GRect {
+        return c.layer_get_frame(self.asLayer());
+    }
+
     /// Returns the underlying Layer pointer so this layer can be added to a parent.
     pub fn asLayer(self: TextLayer) *c.Layer {
         return c.text_layer_get_layer(self.raw).?;
@@ -108,6 +128,10 @@ pub const BitmapLayer = struct {
 
     pub fn setCompositingMode(self: BitmapLayer, mode: c.GCompOp) void {
         c.bitmap_layer_set_compositing_mode(self.raw, mode);
+    }
+
+    pub fn setHidden(self: BitmapLayer, hidden: bool) void {
+        c.layer_set_hidden(self.asLayer(), hidden);
     }
 
     /// Returns the underlying Layer pointer so this layer can be added to a parent.
