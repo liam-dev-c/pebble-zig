@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) void {
 
     pebble_build.addPebbleApp(b, .{
         .name = "watchface-tutorial",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/zig/main.zig"),
         .pebble_lib_path = pebble_zig.path("src/pebble.zig"),
     });
 }

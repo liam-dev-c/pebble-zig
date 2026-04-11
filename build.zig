@@ -13,7 +13,7 @@ pub const PebbleAppOptions = struct {
     pebble_sdk_include_path: ?std.Build.LazyPath = null,
     /// Output path for the generated keys Zig file (from package.json).
     /// Defaults to "src/generated_keys.zig".
-    keys_output_path: []const u8 = "src/generated_keys.zig",
+    keys_output_path: []const u8 = "src/zig/generated_keys.zig",
 };
 
 /// Creates and returns the `pebble` module configured for the Pebble target.
