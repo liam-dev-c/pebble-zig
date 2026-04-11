@@ -17,7 +17,6 @@
 /// - `event`       - Battery and connection event subscriptions
 ///
 /// For any API not yet wrapped, use `pebble.c` directly.
-
 pub const c = @import("c");
 
 // Submodules
@@ -88,3 +87,5 @@ pub const PBL_SMARTSTRAP_POWER: bool = build_options.PBL_SMARTSTRAP_POWER;
 pub const PBL_HEALTH: bool = build_options.PBL_HEALTH;
 pub const PBL_RECT: bool = build_options.PBL_RECT;
 pub const PBL_ROUND: bool = build_options.PBL_ROUND;
+pub const PBL_DISPLAY_WIDTH: u16 = build_options.PBL_DISPLAY_WIDTH;
+pub const PBL_DISPLAY_HEIGHT: u16 = build_options.PBL_DISPLAY_HEIGHT;

@@ -27,15 +27,17 @@ pub fn addPebbleModule(
     const target = pebbleTarget(b);
 
     const build_options = b.addOptions();
-    build_options.addOption(bool, "PBL_BW",               defines.PBL_BW);
-    build_options.addOption(bool, "PBL_COLOR",            defines.PBL_COLOR);
-    build_options.addOption(bool, "PBL_MICROPHONE",       defines.PBL_MICROPHONE);
-    build_options.addOption(bool, "PBL_COMPASS",          defines.PBL_COMPASS);
-    build_options.addOption(bool, "PBL_SMARTSTRAP",       defines.PBL_SMARTSTRAP);
+    build_options.addOption(bool, "PBL_BW", defines.PBL_BW);
+    build_options.addOption(bool, "PBL_COLOR", defines.PBL_COLOR);
+    build_options.addOption(bool, "PBL_MICROPHONE", defines.PBL_MICROPHONE);
+    build_options.addOption(bool, "PBL_COMPASS", defines.PBL_COMPASS);
+    build_options.addOption(bool, "PBL_SMARTSTRAP", defines.PBL_SMARTSTRAP);
     build_options.addOption(bool, "PBL_SMARTSTRAP_POWER", defines.PBL_SMARTSTRAP_POWER);
-    build_options.addOption(bool, "PBL_HEALTH",           defines.PBL_HEALTH);
-    build_options.addOption(bool, "PBL_RECT",             defines.PBL_RECT);
-    build_options.addOption(bool, "PBL_ROUND",            defines.PBL_ROUND);
+    build_options.addOption(bool, "PBL_HEALTH", defines.PBL_HEALTH);
+    build_options.addOption(bool, "PBL_RECT", defines.PBL_RECT);
+    build_options.addOption(bool, "PBL_ROUND", defines.PBL_ROUND);
+    build_options.addOption(u16, "PBL_DISPLAY_WIDTH", defines.PBL_DISPLAY_WIDTH);
+    build_options.addOption(u16, "PBL_DISPLAY_HEIGHT", defines.PBL_DISPLAY_HEIGHT);
 
     const pebble_lib = options.pebble_lib_path orelse b.path("src/pebble.zig");
 
@@ -66,7 +68,7 @@ pub fn addPebbleApp(b: *std.Build, options: PebbleAppOptions) void {
         std.debug.print("Warning: failed to generate keys from package.json: {}\n", .{err});
     };
 
-    const platform_name = b.option([]const u8, "PLATFORM_NAME", "Platform name (aplite/basalt/chalk/diorite/emery)") orelse "basalt";
+    const platform_name = b.option([]const u8, "PLATFORM_NAME", "Platform name (aplite/basalt/chalk/diorite/emery/flint/gabbro)") orelse "basalt";
     const defines_str = b.option([]const u8, "DEFINES", "Comma-separated platform defines from Pebble SDK") orelse "";
     const defines = parsePlatformDefines(defines_str);
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
@@ -298,30 +300,43 @@ fn pebbleTarget(b: *std.Build) std.Build.ResolvedTarget {
 }
 
 pub const PlatformDefines = struct {
-    PBL_BW: bool              = false,
-    PBL_COLOR: bool           = false,
-    PBL_MICROPHONE: bool      = false,
-    PBL_COMPASS: bool         = false,
-    PBL_SMARTSTRAP: bool      = false,
-    PBL_SMARTSTRAP_POWER: bool= false,
-    PBL_HEALTH: bool          = false,
-    PBL_RECT: bool            = false,
-    PBL_ROUND: bool           = false,
+    PBL_BW: bool = false,
+    PBL_COLOR: bool = false,
+    PBL_MICROPHONE: bool = false,
+    PBL_COMPASS: bool = false,
+    PBL_SMARTSTRAP: bool = false,
+    PBL_SMARTSTRAP_POWER: bool = false,
+    PBL_HEALTH: bool = false,
+    PBL_RECT: bool = false,
+    PBL_ROUND: bool = false,
+    PBL_DISPLAY_WIDTH: u16 = 100,
+    PBL_DISPLAY_HEIGHT: u16 = 100,
 };
 
 pub fn parsePlatformDefines(defines_str: []const u8) PlatformDefines {
     var d = PlatformDefines{};
     var iter = std.mem.splitScalar(u8, defines_str, ',');
     while (iter.next()) |define| {
-        if (std.mem.eql(u8, define, "PBL_BW"))               d.PBL_BW = true;
-        if (std.mem.eql(u8, define, "PBL_COLOR"))            d.PBL_COLOR = true;
-        if (std.mem.eql(u8, define, "PBL_MICROPHONE"))       d.PBL_MICROPHONE = true;
-        if (std.mem.eql(u8, define, "PBL_COMPASS"))          d.PBL_COMPASS = true;
-        if (std.mem.eql(u8, define, "PBL_SMARTSTRAP"))       d.PBL_SMARTSTRAP = true;
-        if (std.mem.eql(u8, define, "PBL_SMARTSTRAP_POWER")) d.PBL_SMARTSTRAP_POWER = true;
-        if (std.mem.eql(u8, define, "PBL_HEALTH"))           d.PBL_HEALTH = true;
-        if (std.mem.eql(u8, define, "PBL_RECT"))             d.PBL_RECT = true;
-        if (std.mem.eql(u8, define, "PBL_ROUND"))            d.PBL_ROUND = true;
+        // Split on '=' to separate name from optional value
+        const eq_pos = std.mem.indexOfScalar(u8, define, '=');
+        const name = if (eq_pos) |p| define[0..p] else define;
+        const value = if (eq_pos) |p| define[p + 1 ..] else null;
+
+        if (std.mem.eql(u8, name, "PBL_BW")) d.PBL_BW = true;
+        if (std.mem.eql(u8, name, "PBL_COLOR")) d.PBL_COLOR = true;
+        if (std.mem.eql(u8, name, "PBL_MICROPHONE")) d.PBL_MICROPHONE = true;
+        if (std.mem.eql(u8, name, "PBL_COMPASS")) d.PBL_COMPASS = true;
+        if (std.mem.eql(u8, name, "PBL_SMARTSTRAP")) d.PBL_SMARTSTRAP = true;
+        if (std.mem.eql(u8, name, "PBL_SMARTSTRAP_POWER")) d.PBL_SMARTSTRAP_POWER = true;
+        if (std.mem.eql(u8, name, "PBL_HEALTH")) d.PBL_HEALTH = true;
+        if (std.mem.eql(u8, name, "PBL_RECT")) d.PBL_RECT = true;
+        if (std.mem.eql(u8, name, "PBL_ROUND")) d.PBL_ROUND = true;
+        if (std.mem.eql(u8, name, "PBL_DISPLAY_WIDTH")) {
+            if (value) |v| d.PBL_DISPLAY_WIDTH = std.fmt.parseInt(u16, v, 10) catch d.PBL_DISPLAY_WIDTH;
+        }
+        if (std.mem.eql(u8, name, "PBL_DISPLAY_HEIGHT")) {
+            if (value) |v| d.PBL_DISPLAY_HEIGHT = std.fmt.parseInt(u16, v, 10) catch d.PBL_DISPLAY_HEIGHT;
+        }
     }
     return d;
 }
