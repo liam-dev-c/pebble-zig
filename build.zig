@@ -110,11 +110,11 @@ pub fn addPebbleApp(b: *std.Build, options: PebbleAppOptions) void {
 fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath, platform_name: []const u8) *std.Build.Module {
     _ = sdk_include_override;
 
-    const sdk_path = discoverSdkPath(b.allocator) orelse
+    const sdk_path = discoverSdkPath(b) orelse
         @panic("Pebble SDK not found at ~/.pebble-sdk. Install the SDK or set pebble_sdk_include_path.");
 
     const pebble_include_path = b.pathJoin(&.{ sdk_path, "sdk-core/pebble", platform_name, "include" });
-    const arm_gcc = discoverArmGcc(b.allocator) orelse
+    const arm_gcc = discoverArmGcc(b) orelse
         @panic("arm-none-eabi-gcc not found. Install Pebble SDK toolchain.");
 
     // Step 1: Write stub headers into the build cache
@@ -189,25 +189,29 @@ fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath, p
     });
 }
 
-fn discoverSdkPath(allocator: std.mem.Allocator) ?[]const u8 {
-    const home = std.posix.getenv("HOME") orelse return null;
-    const path = std.fmt.allocPrint(allocator, "{s}/.pebble-sdk/SDKs/current", .{home}) catch return null;
-    std.fs.cwd().access(path, .{}) catch {
-        allocator.free(path);
+fn discoverSdkPath(b: *std.Build) ?[]const u8 {
+    const home = b.graph.environ_map.get("HOME") orelse return null;
+    const path = std.fmt.allocPrint(b.allocator, "{s}/.pebble-sdk/SDKs/current", .{home}) catch return null;
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
+    std.Io.Dir.accessAbsolute(io, path, .{}) catch {
+        b.allocator.free(path);
         return null;
     };
     return path;
 }
 
-fn discoverArmGcc(allocator: std.mem.Allocator) ?[]const u8 {
-    const home = std.posix.getenv("HOME") orelse return null;
+fn discoverArmGcc(b: *std.Build) ?[]const u8 {
+    const home = b.graph.environ_map.get("HOME") orelse return "arm-none-eabi-gcc";
     const path = std.fmt.allocPrint(
-        allocator,
+        b.allocator,
         "{s}/.pebble-sdk/SDKs/current/toolchain/arm-none-eabi/bin/arm-none-eabi-gcc",
         .{home},
-    ) catch return null;
-    std.fs.cwd().access(path, .{}) catch {
-        allocator.free(path);
+    ) catch return "arm-none-eabi-gcc";
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
+    std.Io.Dir.accessAbsolute(io, path, .{}) catch {
+        b.allocator.free(path);
         return "arm-none-eabi-gcc";
     };
     return path;
@@ -350,28 +354,29 @@ pub fn generateKeys(
     zig_output_path: []const u8,
     c_output_dir: []const u8,
 ) !void {
-    const package_json = try std.fs.cwd().readFileAlloc(allocator, package_json_path, 10 * 1024 * 1024);
+    var threaded: std.Io.Threaded = .init_single_threaded;
+    const io = threaded.io();
+    const cwd = std.Io.Dir.cwd();
+
+    const package_json = try cwd.readFileAlloc(io, package_json_path, allocator, @enumFromInt(10 * 1024 * 1024));
     defer allocator.free(package_json);
 
     const parsed = try std.json.parseFromSlice(std.json.Value, allocator, package_json, .{});
     defer parsed.deinit();
 
-    var zig_buf = std.ArrayList(u8){};
+    var zig_buf: std.ArrayList(u8) = .empty;
     defer zig_buf.deinit(allocator);
-    const zw = zig_buf.writer(allocator);
-    try zw.writeAll("// Auto-generated from package.json — do not edit\n\n");
+    try zig_buf.appendSlice(allocator, "// Auto-generated from package.json — do not edit\n\n");
 
-    var res_buf = std.ArrayList(u8){};
+    var res_buf: std.ArrayList(u8) = .empty;
     defer res_buf.deinit(allocator);
-    const rw = res_buf.writer(allocator);
-    try rw.writeAll("#pragma once\n// Auto-generated from package.json\n\n");
+    try res_buf.appendSlice(allocator, "#pragma once\n// Auto-generated from package.json\n\n");
 
-    var msg_buf = std.ArrayList(u8){};
+    var msg_buf: std.ArrayList(u8) = .empty;
     defer msg_buf.deinit(allocator);
-    const mw = msg_buf.writer(allocator);
-    try mw.writeAll("#pragma once\n// Auto-generated from package.json\n\n");
+    try msg_buf.appendSlice(allocator, "#pragma once\n// Auto-generated from package.json\n\n");
 
-    try zw.writeAll("// Resource IDs\n");
+    try zig_buf.appendSlice(allocator, "// Resource IDs\n");
     if (parsed.value.object.get("pebble")) |pebble| {
         if (pebble.object.get("resources")) |resources| {
             if (resources.object.get("media")) |media| {
@@ -379,40 +384,40 @@ pub fn generateKeys(
                     const name = item.object.get("name").?.string;
                     var upper_buf: [256]u8 = undefined;
                     const upper = toUpper(name, &upper_buf);
-                    try zw.print("pub const RESOURCE_ID_{s} = {d};\n", .{ upper, i + 1 });
-                    try rw.print("#define RESOURCE_ID_{s} {d}\n", .{ upper, i + 1 });
+                    try zig_buf.print(allocator, "pub const RESOURCE_ID_{s} = {d};\n", .{ upper, i + 1 });
+                    try res_buf.print(allocator, "#define RESOURCE_ID_{s} {d}\n", .{ upper, i + 1 });
                 }
             }
         }
     }
 
-    try zw.writeAll("\n// Message Keys\n");
+    try zig_buf.appendSlice(allocator, "\n// Message Keys\n");
     if (parsed.value.object.get("pebble")) |pebble| {
         if (pebble.object.get("messageKeys")) |message_keys| {
             for (message_keys.array.items, 0..) |item, i| {
                 const key = item.string;
-                try zw.print("pub const MESSAGE_KEY_{s} = {d};\n", .{ key, 10000 + i });
-                try mw.print("#define MESSAGE_KEY_{s} {d}\n", .{ key, 10000 + i });
+                try zig_buf.print(allocator, "pub const MESSAGE_KEY_{s} = {d};\n", .{ key, 10000 + i });
+                try msg_buf.print(allocator, "#define MESSAGE_KEY_{s} {d}\n", .{ key, 10000 + i });
             }
         }
     }
 
     if (std.mem.lastIndexOfScalar(u8, zig_output_path, '/')) |end| {
-        std.fs.cwd().makePath(zig_output_path[0..end]) catch {};
+        cwd.createDirPath(io, zig_output_path[0..end]) catch {};
     }
-    try std.fs.cwd().writeFile(.{ .sub_path = zig_output_path, .data = zig_buf.items });
+    try cwd.writeFile(io, .{ .sub_path = zig_output_path, .data = zig_buf.items });
 
-    std.fs.cwd().makePath(c_output_dir) catch {};
+    cwd.createDirPath(io, c_output_dir) catch {};
     const src_dir = try std.fmt.allocPrint(allocator, "{s}/src", .{c_output_dir});
     defer allocator.free(src_dir);
-    std.fs.cwd().makePath(src_dir) catch {};
+    cwd.createDirPath(io, src_dir) catch {};
 
     const res_path = try std.fmt.allocPrint(allocator, "{s}/src/resource_ids.auto.h", .{c_output_dir});
     defer allocator.free(res_path);
     const msg_path = try std.fmt.allocPrint(allocator, "{s}/message_keys.auto.h", .{c_output_dir});
     defer allocator.free(msg_path);
-    try std.fs.cwd().writeFile(.{ .sub_path = res_path, .data = res_buf.items });
-    try std.fs.cwd().writeFile(.{ .sub_path = msg_path, .data = msg_buf.items });
+    try cwd.writeFile(io, .{ .sub_path = res_path, .data = res_buf.items });
+    try cwd.writeFile(io, .{ .sub_path = msg_path, .data = msg_buf.items });
 }
 
 fn toUpper(input: []const u8, buf: *[256]u8) []const u8 {
