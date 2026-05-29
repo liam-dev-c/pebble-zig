@@ -145,7 +145,7 @@ fn generateCBindings(b: *std.Build, sdk_include_override: ?std.Build.LazyPath, p
     });
     preprocess.addArg(b.pathJoin(&.{ pebble_include_path, "pebble.h" }));
     preprocess.setStdIn(.{ .none = {} });
-    const preprocessed = preprocess.captureStdOut();
+    const preprocessed = preprocess.captureStdOut(.{});
 
     // Step 3: Strip preprocessor line markers and write to a .h file
     const strip = b.addSystemCommand(&.{ "bash", "-c", "sed '/^#/d' \"$1\" > \"$2\"", "_" });
