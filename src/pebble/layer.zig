@@ -2,6 +2,10 @@
 const c = @import("c");
 const gcolor = @import("gcolor.zig");
 
+// union_GColor8 is opaque in Zig 0.16.0 (C bitfields); redeclare with u8 to match the ABI.
+extern fn text_layer_set_text_color(text_layer: *c.TextLayer, color: u8) void;
+extern fn text_layer_set_background_color(text_layer: *c.TextLayer, color: u8) void;
+
 /// Safe wrapper around a generic Pebble Layer.
 pub const Layer = struct {
     raw: *c.Layer,
@@ -76,11 +80,11 @@ pub const TextLayer = struct {
     }
 
     pub fn setTextColor(self: TextLayer, color: gcolor.GColor) void {
-        c.text_layer_set_text_color(self.raw, @bitCast(color));
+        text_layer_set_text_color(self.raw, color.argb);
     }
 
     pub fn setBackgroundColor(self: TextLayer, color: gcolor.GColor) void {
-        c.text_layer_set_background_color(self.raw, @bitCast(color));
+        text_layer_set_background_color(self.raw, color.argb);
     }
 
     pub fn setFont(self: TextLayer, font: c.GFont) void {

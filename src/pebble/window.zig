@@ -2,6 +2,9 @@
 const c = @import("c");
 const gcolor = @import("gcolor.zig");
 
+// union_GColor8 is opaque in Zig 0.16.0 (C bitfields); redeclare with u8 to match the ABI.
+extern fn window_set_background_color(window: *c.Window, background_color: u8) void;
+
 pub const Window = struct {
     raw: *c.Window,
 
@@ -44,7 +47,7 @@ pub const Window = struct {
 
     /// Sets the background color of the window.
     pub fn setBackgroundColor(self: Window, color: gcolor.GColor) void {
-        c.window_set_background_color(self.raw, @bitCast(color));
+        window_set_background_color(self.raw, color.argb);
     }
 
     /// Stores arbitrary user data on the window.

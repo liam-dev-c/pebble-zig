@@ -2,16 +2,21 @@
 const c = @import("c");
 const gcolor = @import("gcolor.zig");
 
+// union_GColor8 is opaque in Zig 0.16.0 (C bitfields); redeclare with u8 to match the ABI.
+extern fn graphics_context_set_stroke_color(ctx: ?*c.GContext, color: u8) void;
+extern fn graphics_context_set_fill_color(ctx: ?*c.GContext, color: u8) void;
+extern fn graphics_context_set_text_color(ctx: ?*c.GContext, color: u8) void;
+
 pub fn setStrokeColor(ctx: ?*c.GContext, color: gcolor.GColor) void {
-    c.graphics_context_set_stroke_color(ctx, @bitCast(color));
+    graphics_context_set_stroke_color(ctx, color.argb);
 }
 
 pub fn setFillColor(ctx: ?*c.GContext, color: gcolor.GColor) void {
-    c.graphics_context_set_fill_color(ctx, @bitCast(color));
+    graphics_context_set_fill_color(ctx, color.argb);
 }
 
 pub fn setTextColor(ctx: ?*c.GContext, color: gcolor.GColor) void {
-    c.graphics_context_set_text_color(ctx, @bitCast(color));
+    graphics_context_set_text_color(ctx, color.argb);
 }
 
 pub fn setAntialiased(ctx: ?*c.GContext, enable: bool) void {
